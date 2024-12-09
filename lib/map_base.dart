@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 
 class MapBase extends StatefulWidget {
   const MapBase({super.key});
@@ -12,36 +9,69 @@ class MapBase extends StatefulWidget {
 
 class _MapBaseState extends State<MapBase> {
   List<Offset> routePoints = [];
-  //PolylinePoints polylinePoints = PolylinePoints();
+  TransformationController _controller = TransformationController();
+  GlobalKey _imageKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapUp: (details) {
-        // Convert tap position to relative coordinates within the image
-        setState(() {
-          routePoints.add(details.localPosition);
-        });
-      },
-      child: InteractiveViewer(
-        boundaryMargin: EdgeInsets.all(80),
-        minScale: 0.5, // Minimum zoom scale (for zoom out)
-        maxScale: 4.0, // Maximum zoom scale (for zoom in)
-        child: Stack(
-          children: [
-            // Display the map image
-            Positioned.fill(
-              child: Image.asset(
-                'assets/map_prototype.png', // Replace with your map image path
-                fit: BoxFit.contain,
+    return Scaffold(
+      backgroundColor: Colors.purple,
+      body: GestureDetector(
+        onTapUp: (details) {
+          // Get the image's position on the screen
+          final RenderBox renderBox = _imageKey.currentContext!.findRenderObject() as RenderBox;
+          final imagePosition = renderBox.localToGlobal(Offset.zero); // Get top-left corner position
+
+          // Calculate the adjusted position relative to the image
+          final tapPosition = details.localPosition;
+          final translatedPosition = tapPosition - imagePosition;
+
+          // Get the scale factor from the controller
+          final scale = _controller.value.getMaxScaleOnAxis();
+
+          // Adjust the tapped position by the scale factor
+          final adjustedPosition = translatedPosition / scale;
+
+          setState(() {
+            routePoints.add(adjustedPosition);
+          });
+        },
+        child: Center(
+          child: Container(
+            width: 400,  // Fixed width of the container
+            height: 450, // Fixed height of the container
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black, width: 4.0), // Black border
+              borderRadius: BorderRadius.circular(20.0), // Rounded corners
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20.0),
+              child: InteractiveViewer(
+                transformationController: _controller,
+                boundaryMargin: const EdgeInsets.all(80),
+                minScale: 0.5, // Minimum zoom scale
+                maxScale: 4.0, // Maximum zoom scale
+                panEnabled: false, // Disable panning (only zoom enabled)
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRect(
+                        child: Image.asset(
+                          'assets/map_prototype.png', // Your map image path
+                          fit: BoxFit.contain,
+                          key: _imageKey, // Set the key for the image
+                        ),
+                      ),
+                    ),
+                    CustomPaint(
+                      size: Size(double.infinity, double.infinity),
+                      painter: RoutePainter(routePoints, _controller),
+                    ),
+                  ],
+                ),
               ),
             ),
-            // Draw the route
-            CustomPaint(
-              size: Size(double.infinity, double.infinity),
-              painter: RoutePainter(routePoints),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -50,7 +80,9 @@ class _MapBaseState extends State<MapBase> {
 
 class RoutePainter extends CustomPainter {
   final List<Offset> routePoints;
-  RoutePainter(this.routePoints);
+  final TransformationController controller;
+
+  RoutePainter(this.routePoints, this.controller);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -59,9 +91,18 @@ class RoutePainter extends CustomPainter {
       ..strokeWidth = 4.0
       ..style = PaintingStyle.stroke;
 
+    // Get the current scale from the TransformationController
+    final scale = controller.value.getMaxScaleOnAxis();
+
+    // Iterate through the route points and adjust them to match the current scale
     if (routePoints.isNotEmpty) {
       for (int i = 0; i < routePoints.length - 1; i++) {
-        canvas.drawLine(routePoints[i], routePoints[i + 1], routePaint);
+        // Apply the scaling to the route points
+        final point1 = routePoints[i] * scale;
+        final point2 = routePoints[i + 1] * scale;
+
+        // Draw the line between the points
+        canvas.drawLine(point1, point2, routePaint);
       }
     }
   }
