@@ -7,8 +7,8 @@ import 'package:groceryrouter/components/map_base.dart';
 class FirstScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('First Screen')),
+    return const Scaffold(
+      //appBar: AppBar(title: Text('First Screen')),
       body: Center(child: Text('This is the First Screen')),
     );
   }
@@ -17,8 +17,8 @@ class FirstScreen extends StatelessWidget {
 class ThirdScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Third Screen')),
+    return const Scaffold(
+      //appBar: AppBar(title: Text('Third Screen')),
       body: Center(child: Text('This is the Third Screen')),
     );
   }

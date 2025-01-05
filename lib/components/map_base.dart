@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'dart:math';
-
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
+import 'package:flutter/services.dart' as services;
 
 class CategoryItem {
   final String name;
@@ -20,17 +23,17 @@ class CategoryItem {
 class PathNode {
   final int x;
   final int y;
-  double g = 0; // Cost from start to this node
-  double h = 0; // Estimated cost from this node to end
-  double get f => g + h; // Total cost
+  double g = double.infinity; // Cost from start to this node
+  double h = 0.0; // Estimated cost from this node to end
+  double f = double.infinity; // Total cost
   PathNode? parent;
 
   PathNode(this.x, this.y);
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PathNode && runtimeType == other.runtimeType && x == other.x && y == other.y;
+  bool operator ==(Object other) {
+    return other is PathNode && other.x == x && other.y == y;
+  }
 
   @override
   int get hashCode => x.hashCode ^ y.hashCode;
@@ -44,12 +47,15 @@ class MapBase extends StatefulWidget {
 }
 
 class _MapBaseState extends State<MapBase> {
+  img.Image? mapImage;
   List<CategoryItem> selectedPoints1 = [];
   List<CategoryItem> selectedPoints2 = [];
   bool isImage1 = true;
   double imageWidth = 350;
   double imageHeight = 250;
   String selectedImage = 'Image 1';
+  Offset startMarker = const Offset(261, 210);
+  Offset endMarker = const Offset(120, 210);
 
   // Define grid size for pathfinding
   static const int gridWidth = 35; // Number of cells horizontally
@@ -62,56 +68,76 @@ class _MapBaseState extends State<MapBase> {
     Rect.fromLTWH(25, 15, 5, 5),  // Example obstacle
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    loadMapImage();
+  }
+
+  Future<void> loadMapImage() async {
+    // Load the image from assets using Flutter's asset bundle
+    final ByteData data = await services.rootBundle.load('assets/map_prototype.png');
+    final List<int> bytes = data.buffer.asUint8List();
+    
+    // Decode the image using the image package
+    img.Image image = img.decodeImage(Uint8List.fromList(bytes))!;
+    
+    // Store the decoded image in mapImage
+    setState(() {
+      mapImage = image;
+    });
+  }
+
   final Map<String, List<CategoryItem>> categoryItems = {
-    'Destinations': [
+    'Fresh produce': [
       CategoryItem(
-        name: 'Airport',
-        category: 'Destinations',
-        position: Offset(50, 50),
+        name: 'Apple',
+        category: 'Fresh produce',
+        position: Offset(238, 188),
       ),
       CategoryItem(
-        name: 'Hotel',
-        category: 'Destinations',
-        position: Offset(150, 100),
+        name: 'Cabbage',
+        category: 'Fresh produce',
+        position: Offset(319, 164),
       ),
       CategoryItem(
-        name: 'Restaurant',
-        category: 'Destinations',
-        position: Offset(250, 150),
-      ),
-    ],
-    'Activities': [
-      CategoryItem(
-        name: 'Hiking',
-        category: 'Activities',
-        position: Offset(100, 200),
-      ),
-      CategoryItem(
-        name: 'Swimming',
-        category: 'Activities',
-        position: Offset(200, 75),
-      ),
-      CategoryItem(
-        name: 'Shopping',
-        category: 'Activities',
-        position: Offset(300, 125),
+        name: 'Melon',
+        category: 'Fresh produce',
+        position: Offset(266, 112),
       ),
     ],
-    'Transport': [
+    'Bakery': [
       CategoryItem(
-        name: 'Bus',
-        category: 'Transport',
-        position: Offset(75, 150),
+        name: 'Baguettes',
+        category: 'Bakery',
+        position: Offset(266, 50),
       ),
       CategoryItem(
-        name: 'Train',
-        category: 'Transport',
-        position: Offset(175, 175),
+        name: 'Bread',
+        category: 'Bakery',
+        position: Offset(207, 87),
       ),
       CategoryItem(
-        name: 'Taxi',
-        category: 'Transport',
-        position: Offset(275, 100),
+        name: 'Sandwich',
+        category: 'Bakery',
+        position: Offset(164, 172),
+      ),
+    ],
+    'Drinks': [
+      CategoryItem(
+        name: 'Alcohol',
+        category: 'Drinks',
+        position: Offset(48, 70),
+      ),
+      CategoryItem(
+        name: 'Soda',
+        category: 'Drinks',
+        position: Offset(115, 110),
+      ),
+      CategoryItem(
+        name: 'Water',
+        category: 'Drinks',
+        position: Offset(94, 171),
       ),
     ],
   };
@@ -131,14 +157,18 @@ class _MapBaseState extends State<MapBase> {
   }
 
   // Check if a grid cell is walkable (not in an obstacle)
-  bool isWalkable(int x, int y) {
+  bool isWalkable(int x, int y, img.Image mapImage) {
+    // Convert grid coordinates to screen coordinates
     Offset screenPos = gridToScreen(x, y);
-    for (var obstacle in obstacles) {
-      if (obstacle.contains(screenPos)) {
-        return false;
-      }
-    }
-    return true;
+    
+    // Get the pixel at the screen position
+    img.Pixel pixel = mapImage.getPixel(screenPos.dx.toInt(), screenPos.dy.toInt());
+    
+    return isGrayColor(pixel);
+  }
+
+  bool isGrayColor(img.Pixel color) {
+    return color.r == 195 && color.g == 195 && color.b == 195;
   }
 
   // Get valid neighbors for a node
@@ -155,7 +185,7 @@ class _MapBaseState extends State<MapBase> {
 
       if (newX >= 0 && newX < gridWidth && 
           newY >= 0 && newY < gridHeight && 
-          isWalkable(newX, newY)) {
+          isWalkable(newX, newY, mapImage!)) {
         neighbors.add(PathNode(newX, newY));
       }
     }
@@ -169,53 +199,57 @@ class _MapBaseState extends State<MapBase> {
   }
 
   // A* pathfinding algorithm
-  List<Offset> findPath(Offset start, Offset end) {
-    Point<int> startGrid = screenToGrid(start);
-    Point<int> endGrid = screenToGrid(end);
+  List<Offset> findPath(Offset start, Offset end, Set<PathNode> visitedNodes) {
+  Point<int> startGrid = screenToGrid(start);
+  Point<int> endGrid = screenToGrid(end);
 
-    PathNode startNode = PathNode(startGrid.x, startGrid.y);
-    PathNode endNode = PathNode(endGrid.x, endGrid.y);
+  PathNode startNode = PathNode(startGrid.x, startGrid.y);
+  PathNode endNode = PathNode(endGrid.x, endGrid.y);
 
-    List<PathNode> openSet = [startNode];
-    Set<PathNode> closedSet = {};
+  List<PathNode> openSet = [startNode];
+  Set<PathNode> closedSet = {};
 
-    while (openSet.isNotEmpty) {
-      PathNode current = openSet.reduce((a, b) => a.f < b.f ? a : b);
+  startNode.g = 0;
+  startNode.f = heuristic(startNode, endNode);
 
-      if (current == endNode) {
-        // Reconstruct path
-        List<Offset> path = [];
-        PathNode? node = current;
-        while (node != null) {
-          path.add(gridToScreen(node.x, node.y));
-          node = node.parent;
-        }
-        return path.reversed.toList();
+  while (openSet.isNotEmpty) {
+    // Get the node with the lowest f score
+    PathNode current = openSet.reduce((a, b) => a.f < b.f ? a : b);
+
+    if (current == endNode) {
+      // Reconstruct the path
+      List<Offset> path = [];
+      PathNode? node = current;
+      while (node != null) {
+        path.add(gridToScreen(node.x, node.y));
+        node = node.parent;
       }
-
-      openSet.remove(current);
-      closedSet.add(current);
-
-      for (var neighbor in getNeighbors(current)) {
-        if (closedSet.contains(neighbor)) continue;
-
-        double tentativeG = current.g + 1;
-
-        if (!openSet.contains(neighbor)) {
-          openSet.add(neighbor);
-        } else if (tentativeG >= neighbor.g) {
-          continue;
-        }
-
-        neighbor.parent = current;
-        neighbor.g = tentativeG;
-        neighbor.h = heuristic(neighbor, endNode);
-      }
+      return path.reversed.toList(); // Return reversed path
     }
 
-    // If no path found, return direct line
-    return [start, end];
+    openSet.remove(current);
+    closedSet.add(current);
+    visitedNodes.add(current); // Mark as visited
+
+    for (var neighbor in getNeighbors(current)) {
+      if (closedSet.contains(neighbor) || visitedNodes.contains(neighbor)) continue;
+
+      double tentativeG = current.g + 1;
+      if (!openSet.contains(neighbor)) {
+        openSet.add(neighbor);
+      } else if (tentativeG >= neighbor.g) {
+        continue;
+      }
+
+      neighbor.parent = current;
+      neighbor.g = tentativeG;
+      neighbor.f = neighbor.g + heuristic(neighbor, endNode);
+    }
   }
+
+  // If no path is found, return a direct line
+  return [start, end];
+}
 
   void showSelectionDialog() {
     categoryItems.forEach((category, items) {
@@ -310,6 +344,7 @@ class _MapBaseState extends State<MapBase> {
                           fit: BoxFit.cover,
                         ),
                       ),
+                      if(mapImage != null)
                       CustomPaint(
                         size: Size(imageWidth, imageHeight),
                         painter: PointsAndRoutePainter(
@@ -317,6 +352,9 @@ class _MapBaseState extends State<MapBase> {
                           imageWidth: imageWidth,
                           imageHeight: imageHeight,
                           findPath: findPath,
+                          startMarker: startMarker,
+                          endMarker: endMarker,
+                          mapImage: mapImage!,
                         ),
                       ),
                     ],
@@ -389,19 +427,36 @@ class PointsAndRoutePainter extends CustomPainter {
   final List<CategoryItem> points;
   final double imageWidth;
   final double imageHeight;
-  final Function(Offset, Offset) findPath;
+  final Function(Offset, Offset, Set<PathNode>) findPath;
+  final Offset startMarker;
+  final Offset endMarker;
   static const double circleRadius = 6.0;
   static const double strokeWidth = 2.0;
+  final img.Image mapImage;
 
   PointsAndRoutePainter({
     required this.points,
     required this.imageWidth,
     required this.imageHeight,
-    required this.findPath,
+    required this.findPath, 
+    required this.startMarker,
+    required this.endMarker,
+    required this.mapImage,
   });
+
+  bool isGrayColor(img.Pixel color) {
+    return color.r == 195 && color.g == 195 && color.b == 195;
+  }
+
+  // // Calculate the distance between two points
+  // double calculateDistance(Offset a, Offset b) {
+  //   return (a.dx - b.dx).abs() + (a.dy - b.dy).abs(); // Manhattan Distance
+  // }
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (mapImage == null) return;
+
     final Paint circleFillPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
@@ -416,21 +471,57 @@ class PointsAndRoutePainter extends CustomPainter {
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
 
-    // Draw routes between points using pathfinding
+    final Paint startMarkerPaint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.fill;
+
+    final Paint endMarkerPaint = Paint()
+      ..color = Colors.red
+      ..style = PaintingStyle.fill;
+
+    Set<PathNode> visitedNodes = {};
+
+    // Step 1: Draw route from start marker to the first selected point
+    if (points.isNotEmpty) {
+      List<Offset> startToFirstPointPath = findPath(startMarker, points.first.position, visitedNodes);
+      if (startToFirstPointPath.length > 1) {
+        Path path = Path();
+        path.moveTo(startToFirstPointPath.first.dx, startToFirstPointPath.first.dy);
+        for (int i = 1; i < startToFirstPointPath.length; i++) {
+          path.lineTo(startToFirstPointPath[i].dx, startToFirstPointPath[i].dy);
+        }
+        canvas.drawPath(path, routePaint);
+      }
+    }
+
+    // Step 2: Draw routes between selected points
     if (points.length > 1) {
       for (int i = 0; i < points.length - 1; i++) {
-        List<Offset> pathPoints = findPath(points[i].position, points[i + 1].position);
-        
+        List<Offset> pathPoints = findPath(points[i].position, points[i + 1].position, visitedNodes);
+
         if (pathPoints.length > 1) {
           Path path = Path();
           path.moveTo(pathPoints.first.dx, pathPoints.first.dy);
-          
+
           for (int j = 1; j < pathPoints.length; j++) {
             path.lineTo(pathPoints[j].dx, pathPoints[j].dy);
           }
-          
+
           canvas.drawPath(path, routePaint);
         }
+      }
+    }
+
+    // Step 3: Draw route from the last selected point to the end marker
+    if (points.isNotEmpty) {
+      List<Offset> lastToEndPath = findPath(points.last.position, endMarker, visitedNodes);
+      if (lastToEndPath.length > 1) {
+        Path path = Path();
+        path.moveTo(lastToEndPath.first.dx, lastToEndPath.first.dy);
+        for (int i = 1; i < lastToEndPath.length; i++) {
+          path.lineTo(lastToEndPath[i].dx, lastToEndPath[i].dy);
+        }
+        canvas.drawPath(path, routePaint);
       }
     }
 
@@ -439,6 +530,14 @@ class PointsAndRoutePainter extends CustomPainter {
       canvas.drawCircle(point.position, circleRadius, circleFillPaint);
       canvas.drawCircle(point.position, circleRadius, circleStrokePaint);
     }
+    
+    // Draw start marker
+    canvas.drawCircle(startMarker, circleRadius, startMarkerPaint);
+    canvas.drawCircle(startMarker, circleRadius, circleStrokePaint);
+
+    // Draw end marker
+    canvas.drawCircle(endMarker, circleRadius, endMarkerPaint);
+    canvas.drawCircle(endMarker, circleRadius, circleStrokePaint);
   }
 
   @override
