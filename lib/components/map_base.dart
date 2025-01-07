@@ -25,6 +25,7 @@ class _MapBaseState extends State<MapBase> {
 
   Map<String, List<MapPoint>> products = {};
   List<MapPoint> intersections = [];
+  List<MapPoint> obstacles = [];
   List<MapPoint> openings = [];
 
   // Define grid size for pathfinding
@@ -45,6 +46,7 @@ class _MapBaseState extends State<MapBase> {
 
     products = MapPoints.products;
     intersections = MapPoints.intersections;
+    obstacles = MapPoints.obstacles;
     openings = MapPoints.openings;
 
     print('Openings: ${openings.map((p) => p.position).toList()}');
@@ -169,6 +171,7 @@ class _MapBaseState extends State<MapBase> {
                           painter: RoutePainter(
                             products: isImage1 ? selectedPoints1 : selectedPoints2,
                             intersections: intersections,
+                            obstacles: obstacles,
                             openings: openings,
                             imageWidth: imageWidth,
                             imageHeight: imageHeight,

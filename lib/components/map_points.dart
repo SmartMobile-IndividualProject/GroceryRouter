@@ -174,6 +174,69 @@ class MapPoints {
     ),
   ];
 
+  static List<MapPoint> obstacles = [
+    MapPoint(
+      name: 'Obstacle1',
+      category: 'RectLong',
+      position: const Offset(55, 93)
+    ),
+    MapPoint(
+      name: 'Obstacle2',
+      category: 'RectLong',
+      position: const Offset(107, 93)
+    ),
+    MapPoint(
+      name: 'Obstacle3',
+      category: 'RectLong',
+      position: const Offset(154, 91)
+    ),
+    MapPoint(
+      name: 'Obstacle4',
+      category: 'RectLong',
+      position: const Offset(199, 91)
+    ),
+    MapPoint(
+      name: 'Obstacle5',
+      category: 'RectWide',
+      position: const Offset(268, 59)
+    ),
+    MapPoint(
+      name: 'Obstacle6',
+      category: 'RectWide',
+      position: const Offset(268, 104)
+    ),
+    MapPoint(
+      name: 'Obstacle7',
+      category: 'RectShort',
+      position: const Offset(55, 175)
+    ),
+    MapPoint(
+      name: 'Obstacle8',
+      category: 'RectShort',
+      position: const Offset(107, 175)
+    ),
+    MapPoint(
+      name: 'Obstacle9',
+      category: 'RectShort',
+      position: const Offset(154, 175)
+    ),
+    MapPoint(
+      name: 'Obstacle10',
+      category: 'RectLong',
+      position: const Offset(201, 198)
+    ),
+    MapPoint(
+      name: 'Obstacle11',
+      category: 'RectWide',
+      position: const Offset(270, 148)
+    ),
+    MapPoint(
+      name: 'Obstacle12',
+      category: 'RectWide',
+      position: const Offset(270, 192)
+    ),
+  ];
+
   static List<MapPoint> openings = [
     MapPoint(
       name: 'Start',
