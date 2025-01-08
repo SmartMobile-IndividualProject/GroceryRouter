@@ -9,7 +9,7 @@ class FirstScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       //appBar: AppBar(title: Text('First Screen')),
-      body: Center(child: Text('This is the First Screen')),
+      body: Center(child: Text('This is the Home page')),
     );
   }
 }
@@ -19,7 +19,7 @@ class ThirdScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       //appBar: AppBar(title: Text('Third Screen')),
-      body: Center(child: Text('This is the Third Screen')),
+      body: Center(child: Text('This is the Settings page')),
     );
   }
 }
@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Home Screen')),
+      appBar: AppBar(title: Text('GroceryRouter')),
       body: _screens[_selectedIndex], // Display screen based on selected index
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,

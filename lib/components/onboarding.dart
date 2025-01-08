@@ -12,7 +12,7 @@ class _OnboardingState extends State<Onboarding> {
 
   // Move to the next page programmatically
   void _goToNextPage() {
-    if (_currentPage < 2) {
+    if (_currentPage < 3) {
       _pageController.nextPage(
         duration: Duration(milliseconds: 300),
         curve: Curves.ease,
@@ -43,20 +43,35 @@ class _OnboardingState extends State<Onboarding> {
             },
             children: [
               OnboardingPage(
-                title: 'Welcome to App',
-                description: 'This is the first step of the onboarding process.',
-                color: Colors.deepPurple,
-              ),
-              OnboardingPage(
-                title: 'Easy Navigation',
-                description: 'Navigate through the app with ease.',
-                color: Colors.deepPurple,
-              ),
-              OnboardingPage(
-                title: 'Get Started',
-                description: 'Let\'s get started with your amazing journey.',
-                color: Colors.deepPurple,
+                title: 'Welcome to GroceryRouter',
+                description: 'Never get lost finding products in the supermarket again',
+                color: Colors.black87,
                 showButton: true,
+                buttonValue: 'Next',
+                onButtonPressed: _goToNextPage,
+              ),
+              OnboardingPage(
+                title: 'Multiple maps',
+                description: 'Switch through different maps depending on the supermarket you\'re visiting or planning to visit',
+                color: Colors.black87,
+                showButton: true,
+                buttonValue: 'Next',
+                onButtonPressed: _goToNextPage,
+              ),
+              OnboardingPage(
+                title: 'Easy product selection',
+                description: 'Products are easily selected and searchable by name',
+                color: Colors.black87,
+                showButton: true,
+                buttonValue: 'Next',
+                onButtonPressed: _goToNextPage,
+              ),
+              OnboardingPage(
+                title: 'Easy product selection',
+                description: 'Products are easily selected and searchable by name',
+                color: Colors.black87,
+                showButton: true,
+                buttonValue: 'Done',
                 onButtonPressed: _goToHomePage,
               ),
             ],
@@ -64,10 +79,10 @@ class _OnboardingState extends State<Onboarding> {
           // Page Indicator
           Positioned(
             bottom: 60,
-            left: MediaQuery.of(context).size.width / 2 - 20,
+            left: MediaQuery.of(context).size.width / 2 - 46,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) {
+              children: List.generate(4, (index) {
                 bool isActive = _currentPage == index;
                 return Container(
                   margin: EdgeInsets.symmetric(horizontal: 5),
@@ -94,6 +109,7 @@ class OnboardingPage extends StatelessWidget {
   final String description;
   final Color color;
   final bool showButton;
+  final String buttonValue;
   final VoidCallback? onButtonPressed;
 
   OnboardingPage({
@@ -101,6 +117,7 @@ class OnboardingPage extends StatelessWidget {
     required this.description,
     required this.color,
     this.showButton = false,
+    required this.buttonValue,
     this.onButtonPressed,
   });
 
@@ -131,16 +148,16 @@ class OnboardingPage extends StatelessWidget {
               ),
             ),
             if (showButton) ...[
-              SizedBox(height: 40),
+              SizedBox(height: 120),
               ElevatedButton(
                 onPressed: onButtonPressed,
                 child: Text(
-                  "Get Started",
+                  buttonValue,
                   style: TextStyle(fontSize: 18),
                 ),
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
-                  backgroundColor: Colors.pink[700],
+                  backgroundColor: Colors.grey[600],
                   padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 ),
               ),
