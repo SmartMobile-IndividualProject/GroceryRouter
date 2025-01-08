@@ -71,44 +71,83 @@ class _MapBaseState extends State<MapBase> {
     products.forEach((category, items) {
       items.forEach((item) => item.isSelected = false);
     });
+
+    String searchQuery = '';
     
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    context: context,
+    builder: (BuildContext context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          // Filter products based on search query
+          Map<String, List<MapPoint>> filteredProducts = {};
+          
+          if (searchQuery.isEmpty) {
+            filteredProducts = products;
+          } else {
+            products.forEach((category, items) {
+              final filteredItems = items.where(
+                (item) => item.name.toLowerCase().contains(searchQuery.toLowerCase())
+              ).toList();
+              
+              if (filteredItems.isNotEmpty) {
+                filteredProducts[category] = filteredItems;
+              }
+            });
+          }
+          
+          return AlertDialog(
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Select Items'),
+                TextButton(
+                  onPressed: () {
+                    List<MapPoint> selectedItems = [];
+                    products.forEach((category, items) {
+                      selectedItems.addAll(
+                        items.where((item) => item.isSelected),
+                      );
+                    });
+                    
+                    this.setState(() {
+                      if (isImage1) {
+                        selectedPoints1 = List.from(selectedItems);
+                      } else {
+                        selectedPoints2 = List.from(selectedItems);
+                      }
+                    });
+                    
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Confirm'),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Select Items'),
-                  TextButton(
-                    onPressed: () {
-                      List<MapPoint> selectedItems = [];
-                      products.forEach((category, items) {
-                        selectedItems.addAll(
-                          items.where((item) => item.isSelected),
-                        );
-                      });
-                      
-                      this.setState(() {
-                        if (isImage1) {
-                          selectedPoints1 = List.from(selectedItems);
-                        } else {
-                          selectedPoints2 = List.from(selectedItems);
-                        }
-                      });
-                      
-                      Navigator.of(context).pop();
-                    },
-                    child: Text('Confirm'),
+                  // Search TextField
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search products...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          searchQuery = value;
+                        });
+                      },
+                    ),
                   ),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: products.entries.map((category) {
+                  // Product categories and items
+                  ...filteredProducts.entries.map((category) {
                     return ExpansionTile(
                       title: Text(category.key),
                       children: category.value.map((item) {
@@ -124,6 +163,7 @@ class _MapBaseState extends State<MapBase> {
                       }).toList(),
                     );
                   }).toList(),
+                ],
                 ),
               ),
             );

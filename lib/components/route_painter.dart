@@ -13,7 +13,7 @@ class RoutePainter extends CustomPainter {
   final double imageHeight;
   static const double circleRadius = 5.0;
   static const double strokeWidth = 1.5;
-  static const List<double> rectLong = [15, 70];
+  static const List<double> rectLong = [15, 85];
   static const List<double> rectShort = [15, 40];
   static const List<double> rectWide = [60, 15];
 
@@ -156,15 +156,64 @@ class RoutePainter extends CustomPainter {
       ..color = Colors.red
       ..style = PaintingStyle.fill;
     final Paint intersectionPaint = Paint()
-      ..color = const Color.fromARGB(255, 30, 27, 212)
+      ..color = const Color.fromARGB(0, 30, 27, 212)
       ..style = PaintingStyle.fill;
     final Paint obstaclePaint = Paint()
-      ..color = const Color.fromARGB(100, 255, 255, 255)
+      ..color = const Color.fromARGB(0, 255, 255, 255)
       ..style = PaintingStyle.fill;
     final Paint routePaint = Paint()
-      ..color = Colors.purple
+      ..color = const Color.fromARGB(255, 90, 20, 100)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke;
+
+    // Draw route if there are selected products
+    if (products.isNotEmpty) {
+      List<Offset> route = calculateRoute();
+      final path = Path();
+      path.moveTo(route.first.dx, route.first.dy);
+      
+      // Track how many products we've passed to increase brightness
+      int productsPassedCount = 0;
+      Set<Offset> processedPoints = {};
+
+      for (int i = 1; i < route.length; i++) {
+        path.lineTo(route[i].dx, route[i].dy);
+
+        if (products.any((p) => p.position == route[i]) && 
+            !processedPoints.contains(route[i])) {
+          productsPassedCount++;
+          processedPoints.add(route[i]);
+          
+          // Draw segment with increased brightness
+          final Paint segmentPaint = Paint()
+            ..color = HSLColor.fromColor(routePaint.color)
+                .withLightness(min(0.7, 0.3 + (productsPassedCount * 0.1)))
+                .toColor()
+            ..strokeWidth = routePaint.strokeWidth
+            ..style = routePaint.style;
+            
+          canvas.drawPath(path, segmentPaint);
+          
+          // Start new path from this point
+          path.reset();
+          path.moveTo(route[i].dx, route[i].dy);
+        }
+      }
+
+      canvas.drawPath(path, routePaint);
+    }
+
+    // Draw obstacles
+    for (var obstacle in obstacles) {
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: obstacle.position,
+          width: checkCategoryForSize(obstacle.category, 0),
+          height: checkCategoryForSize(obstacle.category, 1),
+        ),
+        obstaclePaint,
+      );
+    }
 
     // Draw products
     for (var point in products) {
@@ -181,32 +230,7 @@ class RoutePainter extends CustomPainter {
     // Draw intersections
     for (var intersection in intersections) {
       canvas.drawCircle(intersection.position, 2.0, intersectionPaint);
-      canvas.drawCircle(intersection.position, 2.0, circleStrokePaint);
-    }
-
-    // Draw obstacles
-    for (var obstacle in obstacles) {
-      canvas.drawRect(
-        Rect.fromCenter(
-          center: obstacle.position,
-          width: checkCategoryForSize(obstacle.category, 0),
-          height: checkCategoryForSize(obstacle.category, 1),
-        ),
-        obstaclePaint,
-      );
-    }
-
-    // Draw route if there are selected products
-    if (products.isNotEmpty) {
-      List<Offset> route = calculateRoute();
-      final path = Path();
-      path.moveTo(route.first.dx, route.first.dy);
-      
-      for (int i = 1; i < route.length; i++) {
-        path.lineTo(route[i].dx, route[i].dy);
-      }
-      
-      canvas.drawPath(path, routePaint);
+      //canvas.drawCircle(intersection.position, 2.0, circleStrokePaint);
     }
   }
 
