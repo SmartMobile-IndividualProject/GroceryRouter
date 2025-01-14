@@ -22,6 +22,7 @@ class _MapBaseState extends State<MapBase> {
   double imageWidth = 350;
   double imageHeight = 250;
   String selectedImage = 'Image 1';
+  bool showLabels = false;
 
   Map<String, List<MapPoint>> products = {};
   List<MapPoint> intersections = [];
@@ -32,17 +33,9 @@ class _MapBaseState extends State<MapBase> {
   static const int gridWidth = 35; // Number of cells horizontally
   static const int gridHeight = 25; // Number of cells vertically
 
-  // Define obstacles (colored boxes) - Coordinates in grid cells
-  // final List<Rect> obstacles = [
-  //   Rect.fromLTWH(5, 5, 5, 5),    // Example obstacle
-  //   Rect.fromLTWH(15, 10, 5, 5),  // Example obstacle
-  //   Rect.fromLTWH(25, 15, 5, 5),  // Example obstacle
-  // ];
-
   @override
   void initState() {
     super.initState();
-    //loadMapImage();
 
     products = MapPoints.products;
     intersections = MapPoints.intersections;
@@ -53,20 +46,6 @@ class _MapBaseState extends State<MapBase> {
     print('Image dimensions: ${imageWidth}x${imageHeight}');
   }
 
-  // Future<void> loadMapImage() async {
-  //   // Load the image from assets using Flutter's asset bundle
-  //   final ByteData data = await services.rootBundle.load('assets/map_prototype.png');
-  //   final List<int> bytes = data.buffer.asUint8List();
-    
-  //   // Decode the image using the image package
-  //   img.Image image = img.decodeImage(Uint8List.fromList(bytes))!;
-    
-  //   // Store the decoded image in mapImage
-  //   setState(() {
-  //     mapImage = image;
-  //   });
-  // }
-
   void showSelectionDialog() {
     products.forEach((category, items) {
       items.forEach((item) => item.isSelected = false);
@@ -75,95 +54,95 @@ class _MapBaseState extends State<MapBase> {
     String searchQuery = '';
     
     showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          // Filter products based on search query
-          Map<String, List<MapPoint>> filteredProducts = {};
-          
-          if (searchQuery.isEmpty) {
-            filteredProducts = products;
-          } else {
-            products.forEach((category, items) {
-              final filteredItems = items.where(
-                (item) => item.name.toLowerCase().contains(searchQuery.toLowerCase())
-              ).toList();
-              
-              if (filteredItems.isNotEmpty) {
-                filteredProducts[category] = filteredItems;
-              }
-            });
-          }
-          
-          return AlertDialog(
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Select Items'),
-                TextButton(
-                  onPressed: () {
-                    List<MapPoint> selectedItems = [];
-                    products.forEach((category, items) {
-                      selectedItems.addAll(
-                        items.where((item) => item.isSelected),
-                      );
-                    });
-                    
-                    this.setState(() {
-                      if (isImage1) {
-                        selectedPoints1 = List.from(selectedItems);
-                      } else {
-                        selectedPoints2 = List.from(selectedItems);
-                      }
-                    });
-                    
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('Confirm'),
-                ),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // Filter products based on search query
+            Map<String, List<MapPoint>> filteredProducts = {};
+            
+            if (searchQuery.isEmpty) {
+              filteredProducts = products;
+            } else {
+              products.forEach((category, items) {
+                final filteredItems = items.where(
+                  (item) => item.name.toLowerCase().contains(searchQuery.toLowerCase())
+                ).toList();
+                
+                if (filteredItems.isNotEmpty) {
+                  filteredProducts[category] = filteredItems;
+                }
+              });
+            }
+            
+            return AlertDialog(
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Search TextField
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search products...',
-                        prefixIcon: Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          searchQuery = value;
-                        });
-                      },
-                    ),
-                  ),
-                  // Product categories and items
-                  ...filteredProducts.entries.map((category) {
-                    return ExpansionTile(
-                      title: Text(category.key),
-                      children: category.value.map((item) {
-                        return CheckboxListTile(
-                          title: Text(item.name),
-                          value: item.isSelected,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              item.isSelected = value ?? false;
-                            });
-                          },
+                  Text('Select Items'),
+                  TextButton(
+                    onPressed: () {
+                      List<MapPoint> selectedItems = [];
+                      products.forEach((category, items) {
+                        selectedItems.addAll(
+                          items.where((item) => item.isSelected),
                         );
-                      }).toList(),
-                    );
-                  }).toList(),
+                      });
+                      
+                      this.setState(() {
+                        if (isImage1) {
+                          selectedPoints1 = List.from(selectedItems);
+                        } else {
+                          selectedPoints2 = List.from(selectedItems);
+                        }
+                      });
+                      
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('Confirm'),
+                  ),
                 ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Search TextField
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search products...',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            searchQuery = value;
+                          });
+                        },
+                      ),
+                    ),
+                    // Product categories and items
+                    ...filteredProducts.entries.map((category) {
+                      return ExpansionTile(
+                        title: Text(category.key),
+                        children: category.value.map((item) {
+                          return CheckboxListTile(
+                            title: Text(item.name),
+                            value: item.isSelected,
+                            onChanged: (bool? value) {
+                              setState(() {
+                                item.isSelected = value ?? false;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      );
+                    }).toList(),
+                  ],
                 ),
               ),
             );
@@ -181,46 +160,62 @@ class _MapBaseState extends State<MapBase> {
         children: [
           Expanded(
             child: Center(
-              child: Container(
-                width: imageWidth,
-                height: imageHeight,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black, width: 4.0),
-                  borderRadius: BorderRadius.circular(20.0),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20.0),
-                  child: Stack(
-                    children: [
-                      // Background image
-                      AnimatedSwitcher(
-                        duration: Duration(milliseconds: 300),
-                        child: Image.asset(
-                          isImage1 ? 'assets/map_prototype.png' : 'assets/map_prototype_2.png',
-                          key: ValueKey(isImage1),
-                          fit: BoxFit.cover,
-                          width: imageWidth,
-                          height: imageHeight,
-                        ),
-                      ),
-                      // CustomPaint should be sized to match exactly
-                      SizedBox(
-                        width: imageWidth,
-                        height: imageHeight,
-                        child: CustomPaint(
-                          painter: RoutePainter(
-                            products: isImage1 ? selectedPoints1 : selectedPoints2,
-                            intersections: intersections,
-                            obstacles: obstacles,
-                            openings: openings,
-                            imageWidth: imageWidth,
-                            imageHeight: imageHeight,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: imageWidth,
+                    height: imageHeight,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black, width: 4.0),
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20.0),
+                      child: Stack(
+                        children: [
+                          // Background image
+                          AnimatedSwitcher(
+                            duration: Duration(milliseconds: 300),
+                            child: Image.asset(
+                              isImage1 ? 'assets/map_prototype.png' : 'assets/map_prototype_2.png',
+                              key: ValueKey(isImage1),
+                              fit: BoxFit.cover,
+                              width: imageWidth,
+                              height: imageHeight,
+                            ),
                           ),
-                        ),
+                          // CustomPaint with route and points
+                          SizedBox(
+                            width: imageWidth,
+                            height: imageHeight,
+                            child: CustomPaint(
+                              painter: RoutePainter(
+                                products: isImage1 ? selectedPoints1 : selectedPoints2,
+                                intersections: intersections,
+                                obstacles: obstacles,
+                                openings: openings,
+                                imageWidth: imageWidth,
+                                imageHeight: imageHeight,
+                                showLabels: showLabels,  // Pass the showLabels state
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  SizedBox(height: 8),  // Add spacing
+                  IconButton(
+                    icon: Icon(Icons.info_outline),
+                    onPressed: () {
+                      setState(() {
+                        showLabels = !showLabels;
+                      });
+                    },
+                    tooltip: 'Toggle Labels',
+                  ),
+                ],
               ),
             ),
           ),

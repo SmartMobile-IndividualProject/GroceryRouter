@@ -11,6 +11,7 @@ class RoutePainter extends CustomPainter {
   final List<MapPoint> openings;
   final double imageWidth;
   final double imageHeight;
+  final bool showLabels;
   static const double circleRadius = 5.0;
   static const double strokeWidth = 1.5;
   static const List<double> rectLong = [15, 85];
@@ -27,6 +28,7 @@ class RoutePainter extends CustomPainter {
     required this.openings,
     required this.imageWidth,
     required this.imageHeight,
+    this.showLabels = false,
   }) {
     obstacleRects = obstacles.map((obstacle) => Rect.fromCenter(
       center: obstacle.position,
@@ -268,6 +270,91 @@ List<Offset> findPathBetweenPoints(Offset start, Offset target, bool isProductTo
     }
     
     _drawStaticElements(canvas);
+
+    if (showLabels) {
+      _drawLabels(canvas);
+    }
+  }
+
+  void _drawLabels(Canvas canvas) {
+    final textStyle = TextStyle(
+      color: Colors.black,
+      fontSize: 12,
+      backgroundColor: Colors.white.withOpacity(0.8),
+    );
+
+    // Draw product labels
+    for (var point in products) {
+      final isLeftAligned = point.name.toLowerCase() == "cabbage";
+      _drawLabel(canvas, point.position, point.name, textStyle, isLeftAligned: isLeftAligned);
+    }
+
+    // Draw start/end labels
+    if (openings.isNotEmpty) {
+      _drawLabel(canvas, openings[0].position, 'Start', textStyle);
+      if (openings.length > 1) {
+        _drawLabel(canvas, openings[1].position, 'End', textStyle);
+      }
+    }
+  }
+
+  void _drawLabel(Canvas canvas, Offset position, String text, TextStyle style, {bool isLeftAligned = false}) {
+    final textSpan = TextSpan(
+      text: text,
+      style: style,
+    );
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+
+    // Calculate text position based on alignment
+    final double xOffset = isLeftAligned 
+        ? position.dx - circleRadius - 4 - textPainter.width
+        : position.dx + circleRadius + 4;
+    
+    final offset = Offset(
+      xOffset,
+      position.dy - textPainter.height / 2,
+    );
+
+    // Create pill-shaped background
+    final height = textPainter.height + 5;  // Increased vertical padding
+    final rect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        offset.dx - 8,                // Increased left padding
+        offset.dy - 3,                // Vertical centering
+        textPainter.width + 16,       // Increased right padding
+        height,
+      ),
+      Radius.circular(height / 2),    // Makes it pill-shaped by using half the height
+    );
+
+    // Draw shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.2)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawRRect(rect.shift(Offset(0, 1)), shadowPaint);
+
+    // Draw background
+    final bgPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(rect, bgPaint);
+
+    // Draw border
+    final borderPaint = Paint()
+      ..color = Colors.black.withOpacity(0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawRRect(rect, borderPaint);
+
+    // Draw text
+    textPainter.paint(canvas, Offset(
+      offset.dx,
+      offset.dy,
+    ));
   }
 
   void _drawStaticElements(Canvas canvas) {
@@ -329,8 +416,11 @@ List<Offset> findPathBetweenPoints(Offset start, Offset target, bool isProductTo
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
+  bool shouldRepaint(covariant RoutePainter oldDelegate) {
+    return oldDelegate.products != products ||
+           oldDelegate.showLabels != showLabels ||
+           oldDelegate.imageWidth != imageWidth ||
+           oldDelegate.imageHeight != imageHeight;
   }
 
   double checkCategoryForSize(String category, int value) {

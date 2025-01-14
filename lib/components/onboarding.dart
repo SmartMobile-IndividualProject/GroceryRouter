@@ -67,8 +67,8 @@ class _OnboardingState extends State<Onboarding> {
                 onButtonPressed: _goToNextPage,
               ),
               OnboardingPage(
-                title: 'Easy product selection',
-                description: 'Products are easily selected and searchable by name',
+                title: 'Get started',
+                description: 'Start planning countless routes!',
                 color: Colors.black87,
                 showButton: true,
                 buttonValue: 'Done',
