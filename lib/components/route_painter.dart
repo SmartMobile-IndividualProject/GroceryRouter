@@ -263,11 +263,11 @@ List<Offset> findPathBetweenPoints(Offset start, Offset target, bool isProductTo
 
   @override
   void paint(Canvas canvas, Size size) {
-    _drawStaticElements(canvas);
-
     if (products.isNotEmpty) {
       _drawRoute(canvas);
     }
+    
+    _drawStaticElements(canvas);
   }
 
   void _drawStaticElements(Canvas canvas) {
@@ -295,13 +295,13 @@ List<Offset> findPathBetweenPoints(Offset start, Offset target, bool isProductTo
       canvas.drawRect(rect, obstaclePaint);
     }
 
+    for (var intersection in intersections) {
+      canvas.drawCircle(intersection.position, 2.0, intersectionPaint);
+    }
+
     for (var point in products) {
       canvas.drawCircle(point.position, circleRadius, circleFillPaint);
       canvas.drawCircle(point.position, circleRadius, circleStrokePaint);
-    }
-
-    for (var intersection in intersections) {
-      canvas.drawCircle(intersection.position, 2.0, intersectionPaint);
     }
 
     canvas.drawCircle(openings[0].position, circleRadius, startMarkerPaint);
