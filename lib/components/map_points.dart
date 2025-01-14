@@ -17,14 +17,14 @@ class MapPoints {
       MapPoint(
         name: 'Melon',
         category: 'Fresh produce',
-        position: const Offset(268, 113)
+        position: const Offset(268, 115)
       ),
     ],
     'Bakery': [
       MapPoint(
         name: 'Baguettes',
         category: 'Bakery',
-        position: const Offset(268, 50)
+        position: const Offset(268, 48)
       ),
       MapPoint(
         name: 'Bread',
@@ -34,14 +34,14 @@ class MapPoints {
       MapPoint(
         name: 'Sandwich',
         category: 'Bakery',
-        position: const Offset(164, 175)
+        position: const Offset(166, 177)
       ),
     ],
     'Drinks': [
       MapPoint(
         name: 'Alcohol',
         category: 'Drinks',
-        position: const Offset(46, 70)
+        position: const Offset(44, 70)
       ),
       MapPoint(
         name: 'Soda',

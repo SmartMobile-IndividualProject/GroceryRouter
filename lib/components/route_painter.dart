@@ -16,6 +16,9 @@ class RoutePainter extends CustomPainter {
   static const List<double> rectLong = [15, 85];
   static const List<double> rectShort = [15, 40];
   static const List<double> rectWide = [60, 15];
+  
+  late final List<Rect> obstacleRects;
+  List<Offset>? _cachedRoute;
 
   RoutePainter({
     required this.products,
@@ -24,124 +27,250 @@ class RoutePainter extends CustomPainter {
     required this.openings,
     required this.imageWidth,
     required this.imageHeight,
-  });
+  }) {
+    obstacleRects = obstacles.map((obstacle) => Rect.fromCenter(
+      center: obstacle.position,
+      width: checkCategoryForSize(obstacle.category, 0),
+      height: checkCategoryForSize(obstacle.category, 1),
+    )).toList();
+  }
 
-  // Check if a line intersects with any obstacle
   bool lineIntersectsObstacle(Offset start, Offset end) {
-    for (var obstacle in obstacles) {
-      Rect obstacleRect = Rect.fromCenter(
-        center: obstacle.position,
-        width: checkCategoryForSize(obstacle.category, 0),
-        height: checkCategoryForSize(obstacle.category, 1),
-      );
-      
-      if (lineIntersectsRect(start, end, obstacleRect)) {
-        return true;
-      }
-    }
-    return false;
+    return obstacleRects.any((rect) => lineIntersectsRect(start, end, rect));
   }
 
-  // Check if a line intersects with a rectangle
   bool lineIntersectsRect(Offset start, Offset end, Rect rect) {
-    var topLeft = rect.topLeft;
-    var topRight = rect.topRight;
-    var bottomLeft = rect.bottomLeft;
-    var bottomRight = rect.bottomRight;
-
-    return lineIntersectsLine(start, end, topLeft, topRight) ||
-           lineIntersectsLine(start, end, topRight, bottomRight) ||
-           lineIntersectsLine(start, end, bottomRight, bottomLeft) ||
-           lineIntersectsLine(start, end, bottomLeft, topLeft);
-  }
-
-  // Check if two line segments intersect
-  bool lineIntersectsLine(Offset line1Start, Offset line1End, Offset line2Start, Offset line2End) {
-    double denominator = ((line2End.dy - line2Start.dy) * (line1End.dx - line1Start.dx)) -
-                        ((line2End.dx - line2Start.dx) * (line1End.dy - line1Start.dy));
-
-    if (denominator == 0) return false;
-
-    double ua = (((line2End.dx - line2Start.dx) * (line1Start.dy - line2Start.dy)) -
-                 ((line2End.dy - line2Start.dy) * (line1Start.dx - line2Start.dx))) / denominator;
-    double ub = (((line1End.dx - line1Start.dx) * (line1Start.dy - line2Start.dy)) -
-                 ((line1End.dy - line1Start.dy) * (line1Start.dx - line2Start.dx))) / denominator;
-
-    return (ua >= 0 && ua <= 1) && (ub >= 0 && ub <= 1);
-  }
-
-  // Find nearest accessible intersection
-  MapPoint findNearestAccessibleIntersection(Offset current, Set<MapPoint> excludeIntersections) {
-    MapPoint? nearest;
-    double minDistance = double.infinity;
-
-    for (var intersection in intersections) {
-      if (excludeIntersections.contains(intersection)) continue;
-      
-      if (!lineIntersectsObstacle(current, intersection.position)) {
-        double distance = (intersection.position - current).distance;
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearest = intersection;
-        }
-      }
-    }
-
-    return nearest ?? intersections.first; // Fallback to first intersection if none found
-  }
-
-  // Calculate the complete route
-  List<Offset> calculateRoute() {
-    List<Offset> route = [];
-    Set<MapPoint> usedIntersections = {};
+    Rect bounds = Rect.fromPoints(start, end);
+    if (!bounds.overlaps(rect)) return false;
     
-    // Start from the entrance
-    route.add(openings[0].position);
-    Offset currentPosition = openings[0].position;
+    var rectLines = [
+      [rect.topLeft, rect.topRight],
+      [rect.topRight, rect.bottomRight],
+      [rect.bottomRight, rect.bottomLeft],
+      [rect.bottomLeft, rect.topLeft],
+    ];
 
-    // Process each selected product
-    for (var product in products) {
-      // Find path to product through intersections
-      while (true) {
-        if (!lineIntersectsObstacle(currentPosition, product.position)) {
-          // Can reach product directly
-          route.add(product.position);
-          currentPosition = product.position;
-          break;
-        } else {
-          // Need to go through an intersection
-          MapPoint nextIntersection = findNearestAccessibleIntersection(
-            currentPosition, 
-            usedIntersections
-          );
-          route.add(nextIntersection.position);
-          usedIntersections.add(nextIntersection);
-          currentPosition = nextIntersection.position;
+    return rectLines.any((line) => linesIntersect(start, end, line[0], line[1])) ||
+           rect.contains(start) || rect.contains(end);
+  }
+
+  bool linesIntersect(Offset a1, Offset a2, Offset b1, Offset b2) {
+    Rect boundsA = Rect.fromPoints(a1, a2);
+    Rect boundsB = Rect.fromPoints(b1, b2);
+    if (!boundsA.overlaps(boundsB)) return false;
+
+    double orientationTest(Offset p, Offset q, Offset r) {
+      return (q.dy - p.dy) * (r.dx - q.dx) - (q.dx - p.dx) * (r.dy - q.dy);
+    }
+
+    double o1 = orientationTest(a1, a2, b1);
+    double o2 = orientationTest(a1, a2, b2);
+    double o3 = orientationTest(b1, b2, a1);
+    double o4 = orientationTest(b1, b2, a2);
+
+    return (o1 * o2 < 0) && (o3 * o4 < 0);
+  }
+
+  // Find nearest intersection that's closer to the target
+  MapPoint? findNearestIntersectionTowardsTarget(Offset current, Offset target) {
+    var candidateIntersections = intersections.where((intersection) {
+      // Check if intersection is closer to target than current position
+      double distanceToTarget = (target - intersection.position).distance;
+      double currentToTarget = (target - current).distance;
+      
+      // Ensure the intersection is closer to the target and path is clear
+      return distanceToTarget < currentToTarget &&
+             !lineIntersectsObstacle(current, intersection.position);
+    }).toList();
+
+    if (candidateIntersections.isEmpty) return null;
+
+    // Sort by combined distance (current to intersection + intersection to target)
+    candidateIntersections.sort((a, b) {
+      double distA = (a.position - current).distance + (a.position - target).distance;
+      double distB = (b.position - current).distance + (b.position - target).distance;
+      return distA.compareTo(distB);
+    });
+
+    return candidateIntersections.first;
+  }
+
+List<Offset> findPathBetweenPoints(Offset start, Offset target, bool isProductToProduct) {
+    List<Offset> path = [start];
+    Offset current = start;
+    Set<Offset> visitedIntersections = {};
+    bool justCollectedProduct = isProductToProduct;
+
+    while (current != target) {
+      // After collecting a product, we must go to an intersection first
+      if (justCollectedProduct) {
+        var nextIntersection = findBestIntersectionAfterProduct(current, target);
+        if (nextIntersection != null) {
+          path.add(nextIntersection.position);
+          current = nextIntersection.position;
+          visitedIntersections.add(current);
+          justCollectedProduct = false;
+          continue;
         }
       }
-    }
 
-    // Route to exit
-    while (true) {
-      if (!lineIntersectsObstacle(currentPosition, openings[1].position)) {
-        route.add(openings[1].position);
+      // Try direct path to target if possible
+      if (!justCollectedProduct && !lineIntersectsObstacle(current, target)) {
+        path.add(target);
         break;
+      }
+
+      // Find next best intersection
+      MapPoint? nextIntersection = findNearestIntersectionTowardsTarget(current, target);
+
+      // If no valid intersection found or we're in a cycle
+      if (nextIntersection == null || visitedIntersections.contains(nextIntersection.position)) {
+        // Try to find any valid intersection as last resort
+        var lastResortIntersection = findLastResortIntersection(current, target, visitedIntersections);
+        
+        if (lastResortIntersection != null) {
+          path.add(lastResortIntersection.position);
+          current = lastResortIntersection.position;
+          visitedIntersections.add(current);
+          justCollectedProduct = false;
+        } else {
+          // If we really can't find any valid path, force through nearest valid intersection
+          var forcedPath = forceThroughNearestValidIntersection(current, target);
+          if (forcedPath.isNotEmpty) {
+            path.addAll(forcedPath.skip(1));
+          }
+          break;
+        }
       } else {
-        MapPoint nextIntersection = findNearestAccessibleIntersection(
-          currentPosition, 
-          usedIntersections
-        );
-        route.add(nextIntersection.position);
-        usedIntersections.add(nextIntersection);
-        currentPosition = nextIntersection.position;
+        path.add(nextIntersection.position);
+        current = nextIntersection.position;
+        visitedIntersections.add(current);
+        justCollectedProduct = false;
       }
     }
 
+    return path;
+  }
+
+  MapPoint? findBestIntersectionAfterProduct(Offset current, Offset target) {
+    // Find intersections that are both accessible from current position and provide a path to target
+    var validIntersections = intersections.where((intersection) {
+      bool accessibleFromCurrent = !lineIntersectsObstacle(current, intersection.position);
+      bool providesPathToTarget = canEventuallyReachTarget(intersection.position, target);
+      return accessibleFromCurrent && providesPathToTarget;
+    }).toList();
+
+    if (validIntersections.isEmpty) return null;
+
+    // Sort intersections by a combination of:
+    // 1. Distance from current position
+    // 2. Distance to target
+    // 3. Number of clear paths to other intersections
+    validIntersections.sort((a, b) {
+      double scoreA = calculateIntersectionScore(a, current, target);
+      double scoreB = calculateIntersectionScore(b, current, target);
+      return scoreA.compareTo(scoreB);
+    });
+
+    return validIntersections.first;
+  }
+
+  double calculateIntersectionScore(MapPoint intersection, Offset current, Offset target) {
+    double distanceToCurrent = (intersection.position - current).distance;
+    double distanceToTarget = (intersection.position - target).distance;
+    int clearPaths = countClearPathsToOtherIntersections(intersection);
+    
+    // Weighted scoring - adjust weights to fine-tune behavior
+    return distanceToCurrent * 0.4 + distanceToTarget * 0.4 - clearPaths * 0.2;
+  }
+
+  int countClearPathsToOtherIntersections(MapPoint intersection) {
+    return intersections
+        .where((other) => other != intersection &&
+            !lineIntersectsObstacle(intersection.position, other.position))
+        .length;
+  }
+
+  bool canEventuallyReachTarget(Offset current, Offset target) {
+    // Check if target can be reached directly
+    if (!lineIntersectsObstacle(current, target)) return true;
+
+    // Check if target can be reached through any intersection
+    return intersections.any((intersection) =>
+        !lineIntersectsObstacle(current, intersection.position) &&
+        !lineIntersectsObstacle(intersection.position, target));
+  }
+
+  MapPoint? findLastResortIntersection(
+      Offset current, Offset target, Set<Offset> visitedIntersections) {
+    var candidates = intersections.where((i) =>
+        !visitedIntersections.contains(i.position) &&
+        !lineIntersectsObstacle(current, i.position) &&
+        canEventuallyReachTarget(i.position, target));
+
+    if (candidates.isEmpty) return null;
+
+    return candidates.reduce((a, b) {
+      double scoreA = calculateIntersectionScore(a, current, target);
+      double scoreB = calculateIntersectionScore(b, current, target);
+      return scoreA < scoreB ? a : b;
+    });
+  }
+
+  List<Offset> forceThroughNearestValidIntersection(Offset current, Offset target) {
+  var bestIntersection = intersections
+      .where((i) =>
+          !lineIntersectsObstacle(current, i.position) &&
+          !lineIntersectsObstacle(i.position, target))
+      .reduce((a, b) {
+          var aDistance = (a.position - current).distance + (a.position - target).distance;
+          var bDistance = (b.position - current).distance + (b.position - target).distance;
+          return aDistance < bDistance ? a : b;
+    });
+    if (bestIntersection != null) {
+      return [current, bestIntersection.position, target];
+    }
+    return [];
+  }
+
+  List<Offset> generateRoute() {
+    if (_cachedRoute != null) return _cachedRoute!;
+
+    List<Offset> route = [];
+    Offset currentPos = openings[0].position;
+
+    // Start to first product
+    var initialPath = findPathBetweenPoints(currentPos, products.first.position, false);
+    route.addAll(initialPath);
+    currentPos = products.first.position;
+
+    // Between products
+    for (int i = 1; i < products.length; i++) {
+      var path = findPathBetweenPoints(currentPos, products[i].position, true);  // Force intersection
+      route.addAll(path.skip(1));  // Skip first point as it's already in route
+      currentPos = products[i].position;
+    }
+
+    // Last product to end
+    if (products.isNotEmpty) {
+      var pathToEnd = findPathBetweenPoints(currentPos, openings[1].position, false);
+      route.addAll(pathToEnd.skip(1));
+    }
+
+    _cachedRoute = route;
     return route;
   }
 
   @override
   void paint(Canvas canvas, Size size) {
+    _drawStaticElements(canvas);
+
+    if (products.isNotEmpty) {
+      _drawRoute(canvas);
+    }
+  }
+
+  void _drawStaticElements(Canvas canvas) {
     final Paint circleFillPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
@@ -161,76 +290,41 @@ class RoutePainter extends CustomPainter {
     final Paint obstaclePaint = Paint()
       ..color = const Color.fromARGB(0, 255, 255, 255)
       ..style = PaintingStyle.fill;
-    final Paint routePaint = Paint()
-      ..color = const Color.fromARGB(255, 90, 20, 100)
-      ..strokeWidth = 3.0
-      ..style = PaintingStyle.stroke;
 
-    // Draw route if there are selected products
-    if (products.isNotEmpty) {
-      List<Offset> route = calculateRoute();
-      final path = Path();
-      path.moveTo(route.first.dx, route.first.dy);
-      
-      // Track how many products we've passed to increase brightness
-      int productsPassedCount = 0;
-      Set<Offset> processedPoints = {};
-
-      for (int i = 1; i < route.length; i++) {
-        path.lineTo(route[i].dx, route[i].dy);
-
-        if (products.any((p) => p.position == route[i]) && 
-            !processedPoints.contains(route[i])) {
-          productsPassedCount++;
-          processedPoints.add(route[i]);
-          
-          // Draw segment with increased brightness
-          final Paint segmentPaint = Paint()
-            ..color = HSLColor.fromColor(routePaint.color)
-                .withLightness(min(0.7, 0.3 + (productsPassedCount * 0.1)))
-                .toColor()
-            ..strokeWidth = routePaint.strokeWidth
-            ..style = routePaint.style;
-            
-          canvas.drawPath(path, segmentPaint);
-          
-          // Start new path from this point
-          path.reset();
-          path.moveTo(route[i].dx, route[i].dy);
-        }
-      }
-
-      canvas.drawPath(path, routePaint);
+    for (var rect in obstacleRects) {
+      canvas.drawRect(rect, obstaclePaint);
     }
 
-    // Draw obstacles
-    for (var obstacle in obstacles) {
-      canvas.drawRect(
-        Rect.fromCenter(
-          center: obstacle.position,
-          width: checkCategoryForSize(obstacle.category, 0),
-          height: checkCategoryForSize(obstacle.category, 1),
-        ),
-        obstaclePaint,
-      );
-    }
-
-    // Draw products
     for (var point in products) {
       canvas.drawCircle(point.position, circleRadius, circleFillPaint);
       canvas.drawCircle(point.position, circleRadius, circleStrokePaint);
     }
 
-    // Draw start/end markers
+    for (var intersection in intersections) {
+      canvas.drawCircle(intersection.position, 2.0, intersectionPaint);
+    }
+
     canvas.drawCircle(openings[0].position, circleRadius, startMarkerPaint);
     canvas.drawCircle(openings[0].position, circleRadius, circleStrokePaint);
     canvas.drawCircle(openings[1].position, circleRadius, endMarkerPaint);
     canvas.drawCircle(openings[1].position, circleRadius, circleStrokePaint);
+  }
 
-    // Draw intersections
-    for (var intersection in intersections) {
-      canvas.drawCircle(intersection.position, 2.0, intersectionPaint);
-      //canvas.drawCircle(intersection.position, 2.0, circleStrokePaint);
+  void _drawRoute(Canvas canvas) {
+    List<Offset> route = generateRoute();
+    
+    for (int i = 0; i < route.length - 1; i++) {
+      double progress = i / (route.length - 1);
+      final Paint routePaint = Paint()
+        ..color = Color.lerp(
+          const Color.fromARGB(255, 90, 20, 100),
+          const Color.fromARGB(255, 200, 180, 220),
+          progress,
+        )!
+        ..strokeWidth = 3.0
+        ..style = PaintingStyle.stroke;
+
+      canvas.drawLine(route[i], route[i + 1], routePaint);
     }
   }
 
