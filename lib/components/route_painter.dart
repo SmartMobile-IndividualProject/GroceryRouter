@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
+import 'package:groceryrouter/components/constants.dart';
 import 'package:groceryrouter/components/map_point.dart';
 import 'dart:math';
 import 'dart:collection';
@@ -277,10 +278,9 @@ List<Offset> findPathBetweenPoints(Offset start, Offset target, bool isProductTo
   }
 
   void _drawLabels(Canvas canvas) {
-    final textStyle = TextStyle(
-      color: Colors.black,
+    const textStyle = TextStyle(
+      color: labelText,
       fontSize: 12,
-      backgroundColor: Colors.white.withOpacity(0.8),
     );
 
     // Draw product labels
@@ -333,19 +333,19 @@ List<Offset> findPathBetweenPoints(Offset start, Offset target, bool isProductTo
 
     // Draw shadow
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.2)
+      ..color = labelShadow.withOpacity(0.2)
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, 2);
     canvas.drawRRect(rect.shift(Offset(0, 1)), shadowPaint);
 
     // Draw background
     final bgPaint = Paint()
-      ..color = Colors.white
+      ..color = labelBackground
       ..style = PaintingStyle.fill;
     canvas.drawRRect(rect, bgPaint);
 
     // Draw border
     final borderPaint = Paint()
-      ..color = Colors.black.withOpacity(0.1)
+      ..color = labelBorder.withOpacity(0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawRRect(rect, borderPaint);
@@ -359,23 +359,23 @@ List<Offset> findPathBetweenPoints(Offset start, Offset target, bool isProductTo
 
   void _drawStaticElements(Canvas canvas) {
     final Paint circleFillPaint = Paint()
-      ..color = Colors.white
+      ..color = circleProduct
       ..style = PaintingStyle.fill;
     final Paint circleStrokePaint = Paint()
-      ..color = Colors.black
+      ..color = circleOutline
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
     final Paint startMarkerPaint = Paint()
-      ..color = Colors.green
+      ..color = circleStart
       ..style = PaintingStyle.fill;
     final Paint endMarkerPaint = Paint()
-      ..color = Colors.red
+      ..color = circleEnd
       ..style = PaintingStyle.fill;
     final Paint intersectionPaint = Paint()
-      ..color = const Color.fromARGB(0, 30, 27, 212)
+      ..color = circleIntersection
       ..style = PaintingStyle.fill;
     final Paint obstaclePaint = Paint()
-      ..color = const Color.fromARGB(0, 255, 255, 255)
+      ..color = rectangleObstacle
       ..style = PaintingStyle.fill;
 
     for (var rect in obstacleRects) {
@@ -404,8 +404,8 @@ List<Offset> findPathBetweenPoints(Offset start, Offset target, bool isProductTo
       double progress = i / (route.length - 1);
       final Paint routePaint = Paint()
         ..color = Color.lerp(
-          const Color.fromARGB(255, 90, 20, 100),
-          const Color.fromARGB(255, 200, 180, 220),
+          routePrimary,
+          routeSecondary,
           progress,
         )!
         ..strokeWidth = 3.0

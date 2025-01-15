@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:groceryrouter/components/constants.dart';
 import 'package:groceryrouter/components/home_screen.dart';
 
 class Onboarding extends StatefulWidget {
@@ -45,7 +46,7 @@ class _OnboardingState extends State<Onboarding> {
               OnboardingPage(
                 title: 'Welcome to GroceryRouter',
                 description: 'Never get lost finding products in the supermarket again',
-                color: Colors.black87,
+                color: onboardingPage,
                 showButton: true,
                 buttonValue: 'Next',
                 onButtonPressed: _goToNextPage,
@@ -53,7 +54,7 @@ class _OnboardingState extends State<Onboarding> {
               OnboardingPage(
                 title: 'Multiple maps',
                 description: 'Switch through different maps depending on the supermarket you\'re visiting or planning to visit',
-                color: Colors.black87,
+                color: onboardingPage,
                 showButton: true,
                 buttonValue: 'Next',
                 onButtonPressed: _goToNextPage,
@@ -61,7 +62,7 @@ class _OnboardingState extends State<Onboarding> {
               OnboardingPage(
                 title: 'Easy product selection',
                 description: 'Products are easily selected and searchable by name',
-                color: Colors.black87,
+                color: onboardingPage,
                 showButton: true,
                 buttonValue: 'Next',
                 onButtonPressed: _goToNextPage,
@@ -69,7 +70,7 @@ class _OnboardingState extends State<Onboarding> {
               OnboardingPage(
                 title: 'Get started',
                 description: 'Start planning countless routes!',
-                color: Colors.black87,
+                color: onboardingPage,
                 showButton: true,
                 buttonValue: 'Done',
                 onButtonPressed: _goToHomePage,
@@ -91,8 +92,8 @@ class _OnboardingState extends State<Onboarding> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isActive
-                        ? Colors.white
-                        : Colors.white.withOpacity(0.5),
+                        ? onboardingIndicatorActive
+                        : onboardingIndicatorInactive.withOpacity(0.5),
                   ),
                 );
               }),
@@ -132,33 +133,33 @@ class OnboardingPage extends StatelessWidget {
           children: [
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 30,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: onboardingTitle,
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
               description,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
-                color: Colors.white70,
+                color: onboardingDescription,
               ),
             ),
             if (showButton) ...[
-              SizedBox(height: 120),
+              const SizedBox(height: 120),
               ElevatedButton(
                 onPressed: onButtonPressed,
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: onboardingButtonActive,
+                  backgroundColor: onboardingButtonInactive[600],
+                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                ),
                 child: Text(
                   buttonValue,
-                  style: TextStyle(fontSize: 18),
-                ),
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.grey[600],
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  style: const TextStyle(fontSize: 18),
                 ),
               ),
             ]
